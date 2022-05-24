@@ -1,0 +1,66 @@
+name: Deployment pipeline
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize]
+
+jobs:
+  simple_deployment_pipeline:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: npm install
+        run: npm install
+      - name: lint
+        run: npm run lint
+      - name: build
+        run: npm run build
+      - name: test
+        run: npm run test
+      - name: deploy to heroku
+        uses: akhileshns/heroku-deploy@v3.12.12
+        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+        with:
+          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+          heroku_app_name: "cicd-exercise124"
+          heroku_email: "andriani.yunita@aalto.fi"
+          healthcheck: "https://cicd-exercise124.herokuapp.com/health"
+          checkstring: "ok"
+          rollbackonhealthcheckfailed: true
+  tag_release:
+    needs: [simple_deployment_pipeline]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@3840ec22ac98e14d981375e3ae2d8d0392964521
+        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+  discord_webhook_notify:
+    needs: [simple_deployment_pipeline]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Success
+        uses: rjstone/discord-webhook-notify@v1.0.4
+        if: ${{ success() }}
+        with:
+          severity: info
+          color: '#00FFFF'
+          text: A new version gets deployed
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Failure
+        uses: rjstone/discord-webhook-notify@v1.0.4
+        if: ${{ failure() }}
+        with:
+          severity: error
+          color: '#A020F0'
+          text: Build failed
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
