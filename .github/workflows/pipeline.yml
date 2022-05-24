@@ -17,6 +17,8 @@ jobs:
           node-version: "16"
       - name: install
         run: npm install
+      - name: install cheerio
+        run: npm install --save-dev cheerio@=1.0.0-rc.3
       - name: lint
         run: npm run lint
       - name: build
