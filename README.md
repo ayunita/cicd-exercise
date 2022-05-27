@@ -122,3 +122,5 @@ Write your frontend custom styles there. https://stackoverflow.com/questions/464
 Redux, GraphQL, database solution and css frameworks. You decide.
 
 :smile:
+
+:fish:
